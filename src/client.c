@@ -3,7 +3,6 @@
  * Copyright (C) 2025 University of Texas at Austin
  */
 
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

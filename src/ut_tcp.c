@@ -169,9 +169,8 @@ int ut_read(ut_socket_t *sock, void *buf, int length, ut_read_mode_t flags) {
           sock->recv_win.last_read += read_len;
         } else {
           free(sock->received_buf);
-          printf("set our buf to null\n");
           sock->received_buf = NULL;
-          sock->received_len = 0;
+          sock->received_len = 0; 
           sock->recv_win.last_read += read_len;
         }
       }

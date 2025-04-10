@@ -149,7 +149,6 @@
       uint32_t acked = get_ack(hdr) - 1 - sock->send_win.last_ack;
       sock->dup_ack_count = 0;
       sock->send_win.last_ack = get_ack(hdr) - 1;
-      sock->sending_len = sock->send_win.last_write - sock->send_win.last_ack;
 
       if (sock->cong_win > sock->slow_start_thresh) {
         sock->cong_win = sock->cong_win + (MSS * (MSS/sock->cong_win));
@@ -157,11 +156,11 @@
         sock->cong_win += MSS;
       }
 
-      if (acked > 0 && acked <= sock->sending_len) {
-        //memmove(sock->sending_buf, sock->sending_buf + acked, sock->sending_len - acked);
-        sock->sending_buf = realloc(sock->sending_buf, sock->sending_len);
+      if (acked > 0) {
+        memmove(sock->sending_buf, sock->sending_buf + acked, sock->sending_len - acked);
+        sock->sending_len -= acked;
       }
-      
+
       pthread_mutex_unlock(&(sock->send_lock));
       send_pkts_data(sock);
    }
@@ -183,8 +182,8 @@
        */
        sock->dup_ack_count++;
        sock->cong_win += MSS;
+
        if (sock->dup_ack_count == 3 && sock->complete_init) {
-          printf("duplicate ack x3\n");
           sock->slow_start_thresh = sock->cong_win/2;
           sock->cong_win = sock->slow_start_thresh + 3;
           sock->send_win.last_sent = sock->send_win.last_ack;
@@ -212,7 +211,6 @@
   ut_tcp_header_t *hdr = (ut_tcp_header_t *)pkt;
   uint32_t seq = get_seq(hdr);
   uint16_t pay_length = get_payload_len(pkt);
-
   if (pay_length == 0) return;
 
   uint32_t offset = seq - sock->recv_win.last_read - 1;
@@ -223,14 +221,16 @@
 
   if (offset + pay_length <= MAX_NETWORK_BUFFER) {
     memcpy(sock->received_buf, get_payload(pkt), pay_length);
+    
     sock->recv_win.last_recv = seq + pay_length - 1;
+    sock->received_len += pay_length;
   }
   
   if (seq == sock->recv_win.next_expect) {
     sock->recv_win.next_expect += pay_length;
     send_empty(sock, ACK_FLAG_MASK, false, false);
   }
-  sock->received_len = sock->recv_win.last_recv - sock->recv_win.last_read + 1;
+  
 }
 
  void handle_pkt(ut_socket_t *sock, uint8_t *pkt)
@@ -378,7 +378,6 @@
        * Refer to the send_empty function for guidance on creating and sending packets.
      * Update the last sent sequence number after each packet is sent.
    */
-  sock->sending_len = sock->send_win.last_write - sock->send_win.last_ack;
 
   uint16_t hlen = sizeof(ut_tcp_header_t);
   uint8_t flags = 0;
