@@ -31,7 +31,7 @@ void functionality(ut_socket_t *sock) {
 
   sleep(1);
 
-  fp = fopen("tests/random.input", "rb");
+  fp = fopen("tests/random.input", "rb"); 
   if (fp == NULL) {
     perror("Error opening file");
     exit(EXIT_FAILURE);
